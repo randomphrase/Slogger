@@ -5,6 +5,8 @@ require 'oauth2'
 require 'optparse'
 require 'fileutils'
 require 'logger'
+require 'socket'
+require 'webrick'
 
 SLOGGER_HOME = File.dirname(File.expand_path(__FILE__))
 
@@ -53,6 +55,7 @@ class Auth
         oauth2_plugin(plugin)
       end
 
+      # TODO: work out how to update the config...
       # plugin['auth'].each do |k,v|
       #   if @config[_namespace][k].nil?
       #     new_options = true
@@ -77,21 +80,19 @@ class Auth
 
     client = OAuth2::Client.new(auth['id'], auth['secret'], {:site => auth['site'], :authorize_url => auth['authorize'], :token_url => auth['token']})
 
-    puts "1) Go to your browser and ensure you are logged in to the relevant account\n\n"
+    server = TCPServer.open 8080
+    server.listen(1)
+
     system("open", client.auth_code.authorize_url(:redirect_uri => 'http://localhost:8080/oauth2/callback'))
     # => "https://example.org/oauth/authorization?response_type=code&client_id=client_id&redirect_uri=http://localhost:8080/oauth2/callback"
 
-    puts "\n\n\n2) Accept the authorization request from Google in your browser:"
-    # STEP 3
-    puts "\n\n\n3) Google will redirect you to localhost, but just copy the code parameter out of the URL they redirect you to, paste it here and hit enter:\n"
-    code = gets.chomp.strip
-  
-    # token = client.auth_code.get_token('authorization_code_value', :redirect_uri => 'http://localhost:8080/oauth2/callback', :headers => {'Authorization' => 'Basic some_password'})
-    # response = token.get('/api/resource', :params => { 'query_foo' => 'bar' })
-    # response.class.name
+    req = WEBrick::HTTPRequest.new(WEBrick::Config::HTTP)
+    req.parse(server.accept)
+    code = req.query['code']
+    
+    access_token_obj = client.auth_code.get_token(code, {'client_id' => auth['id'], 'client_secret' => auth['secret'], 'redirect_uri' => 'http://localhost:8080/oauth2/callback' })
 
-    access_token_obj = client.auth_code.get_token({'code' => code, 'grant_type' => 'authorization_code', 'client_id' => auth['id'], 'client_secret' => auth['secret'], 'redirect_uri' => 'http://localhost:8080/oauth2/callback' })
-
+    puts "OAuth2 completed for 
     puts "Token is: #{access_token_obj.token}"
     puts "Refresh token is: #{access_token_obj.refresh_token}"
   end
