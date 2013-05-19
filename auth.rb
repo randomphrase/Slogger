@@ -92,7 +92,7 @@ class Auth
     
     access_token_obj = client.auth_code.get_token(code, {'client_id' => auth['id'], 'client_secret' => auth['secret'], 'redirect_uri' => 'http://localhost:8080/oauth2/callback' })
 
-    puts "OAuth2 completed for 
+    puts "OAuth2 completed for #{plugin['class']}"
     puts "Token is: #{access_token_obj.token}"
     puts "Refresh token is: #{access_token_obj.refresh_token}"
   end
